@@ -60,4 +60,16 @@ class NodeInformation{
 		bool getStatus();
 };
 
+class Package{
+public:
+	char ipAndPortChar[40];
+	char keyId[40];
+	bool printRouting;
+	// int jumps;
+	Package(){
+		// jumps = 0;
+		printRouting = false;
+		}
+};
+
 #endif

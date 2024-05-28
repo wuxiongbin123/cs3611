@@ -324,7 +324,7 @@ void HelperFunctions::sendValToNode(NodeInformation nodeInfo,int newSock,struct 
 
 /* send successor id of current node to the contacting node */
 void HelperFunctions::sendSuccessorId(NodeInformation nodeInfo,int newSock,struct sockaddr_in client){
-
+    // cout << "sendSuccessorId begins!" << endl;
     pair< pair<string,int> , lli > succ = nodeInfo.getSuccessor();
     string succId = to_string(succ.second);
     char succIdChar[40];
@@ -338,15 +338,15 @@ void HelperFunctions::sendSuccessorId(NodeInformation nodeInfo,int newSock,struc
 }
 
 /* find successor of contacting node and send it's ip:port to it */
-void HelperFunctions::sendSuccessor(NodeInformation nodeInfo,string nodeIdString,int newSock,struct sockaddr_in client){
-    
+void HelperFunctions::sendSuccessor(NodeInformation nodeInfo,string nodeIdString,int newSock,struct sockaddr_in client, bool printRouting){
+    // cout << "sendSuccessor begins!" << endl;
     lli nodeId = stoll(nodeIdString);
 
     socklen_t l = sizeof(client);
     
     /* find successor of the joining node */
     pair< pair<string,int> , lli > succNode;
-    succNode = nodeInfo.findSuccessor(nodeId, true);
+    succNode = nodeInfo.findSuccessor(nodeId, printRouting);
 
     /* get Ip and port of successor as ip:port in char array to send */
     char ipAndPort[40];

@@ -51,8 +51,6 @@ void get(string key,NodeInformation nodeInfo){
             cout<<"Key Not found\n";
 
         else{
-            cout << "Key is finally found at the node with IP: " << node.first.first
-            << ", Port: " << node.first.second << ", Id: " << node.second << endl;
             cout<<"Found "<<key<<" : "<<val<<endl;
         }
 
@@ -287,7 +285,18 @@ void doTask(NodeInformation &nodeInfo,int newSock,struct sockaddr_in client,stri
 
     /* contacting node wants current node to find successor for it */
     else{
-        help.sendSuccessor(nodeInfo,nodeIdString,newSock,client);
+        if(nodeIdString.find("R") != -1){
+            //这里是在routing模式下， 我在nodeString里多加了一个R,现在要去掉
+            char newNodeIdString[40];
+            strcpy(newNodeIdString, nodeIdString.c_str());
+            int lenOfnewNode = strlen(newNodeIdString);
+            newNodeIdString[lenOfnewNode - 1] = '\0';
+            string newNodeIdString_string = newNodeIdString;
+            help.sendSuccessor(nodeInfo,newNodeIdString_string ,newSock,client, true);
+        }
+
+        else
+        help.sendSuccessor(nodeInfo, nodeIdString, newSock, client, false);
     }
 
 }
@@ -303,7 +312,8 @@ void listenTo(NodeInformation &nodeInfo){
         int sock = nodeInfo.sp.getSocketFd();
         int len = recvfrom(sock, charNodeId, 1024, 0, (struct sockaddr *) &client, &l);
         charNodeId[len] = '\0';
-        string nodeIdString = charNodeId;
+        string nodeIdString = charNodeId;//这玩意不是NodeId.
+        // cout << nodeIdString << endl;
 
         /* launch a thread that will perform diff tasks acc to received msg */
         thread f(doTask,ref(nodeInfo),sock,client,nodeIdString);
