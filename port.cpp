@@ -9,6 +9,7 @@
 void SocketAndPort::specifyPortServer(){
 
 	/* generating a port number between 1024 and 65535 */
+    //这里就是初始化一个socket对应的port， 一个node唯一对应一个socket， 用ip：port唯一确定一个socket也是在唯一确定一个node。
 	srand(time(0));
 	portNoServer = rand() % 65536;
 	if(portNoServer < 1024)
@@ -16,6 +17,7 @@ void SocketAndPort::specifyPortServer(){
 
 	socklen_t len = sizeof(current);
 
+    //这里用socket函数创建了一个套接字，这些都是必须得，直接copy下来就可以创建本node的套接字了。
 	sock = socket(AF_INET,SOCK_DGRAM,0);
 	current.sin_family = AF_INET;
 	current.sin_port = htons(portNoServer);

@@ -295,7 +295,15 @@ void doTask(NodeInformation &nodeInfo,int newSock,struct sockaddr_in client,stri
             help.sendSuccessor(nodeInfo,newNodeIdString_string ,newSock,client, true);
         }
 
+        else if(nodeIdString.find("S") != -1){
+            //此时收到的是server的ip，port
+            //直接回传。
+            socklen_t l = sizeof(client);
+            sendto(newSock, nodeIdString, strlen(nodeIdString), 0, (struct sockaddr*) &client, l);
+        }
+
         else
+            //这里不管，是fingerTable的。
         help.sendSuccessor(nodeInfo, nodeIdString, newSock, client, false);
     }
 
@@ -311,11 +319,17 @@ void listenTo(NodeInformation &nodeInfo){
         char charNodeId[40];
         int sock = nodeInfo.sp.getSocketFd();
         int len = recvfrom(sock, charNodeId, 1024, 0, (struct sockaddr *) &client, &l);
+
+
         charNodeId[len] = '\0';
         string nodeIdString = charNodeId;//这玩意不是NodeId.
-        // cout << nodeIdString << endl;
+        //如果听到了Server的信息就print出来。
+        if(nodeIdString.find("S") != -1){
+            cout << nodeIdString << endl;
+        }
 
         /* launch a thread that will perform diff tasks acc to received msg */
+        //这里的sock就对应着本机的端口号，client作为一个数据体，储存着用户的ip和端口号，client有memeber, sin_port代表端口, sin_addr代表ip地址
         thread f(doTask,ref(nodeInfo),sock,client,nodeIdString);
         f.detach();
     }

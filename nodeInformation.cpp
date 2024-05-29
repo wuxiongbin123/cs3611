@@ -281,6 +281,7 @@ cout << "Key is stored in the node with IP: " << self.first.first << ", Port: " 
 
 			else{
 				//这里是routing模式。
+
 			/* connect to node which will now find the successor */
 			struct sockaddr_in serverToConnectTo;
 			socklen_t len = sizeof(serverToConnectTo);
@@ -295,6 +296,7 @@ cout << "Key is stored in the node with IP: " << self.first.first << ", Port: " 
 
 			HelperFunctions help;
 
+            //这里设置了递归的目标，这里的node不在是本节点了。是目标节点。
 			help.setServerDetails(serverToConnectTo,node.first.first,node.first.second);
 
 			/* set timer on this socket */
@@ -364,6 +366,264 @@ cout << "Key is stored in the node with IP: " << self.first.first << ", Port: " 
 			}
 		}
 	}
+}
+
+pair< pair<string,int> , lli > NodeInformation::findSuccessor_routing(lli nodeId, bool printRouting, pair<pair<string, int>,lli > &serverNode){
+    serverNode.second = -1;//这个用来决定是否有去找server。
+
+    pair < pair<string,int> , lli > self; // self 的元素构成 ip, port, id.
+    self.first.first = sp.getIpAddress(); //sp 是socketAndPort， 组成是 socket 和 端口号
+    self.first.second = sp.getPortNumber();
+    self.second = id;
+
+    if(printRouting){
+
+        // // 打印当前节点信息
+        // cout << "Current node ID: " << id << ", IP: " << sp.getIpAddress() << ", Port: " << sp.getPortNumber() << endl;
+
+    }
+
+    if(nodeId > id && nodeId <= successor.second){
+        //需要找的id是在本Node和后继Node的id之间，所以应该是要在后继node里面寻找。
+        if(printRouting) cout << "Key is stored in the node with IP: " << successor.first.first << ", Port: " << successor.first.second << endl;
+        return successor;
+    }
+
+        /* */
+    else if(id == successor.second || nodeId == id){
+        //在 自己的id和后继的id一样，说明环上只有一个点，而且发现就是我要找id 就是这个点的id，所以就返回这个点。
+        if(printRouting) cout << "Key is stored in the node with IP: " << self.first.first << ", Port: " << self.first.second << endl;
+
+        return self;
+    }
+
+    else if(successor.second == predecessor.second){
+        if(successor.second >= id){
+            if(nodeId > successor.second || nodeId < id){
+                if(printRouting){
+                    cout << "Key is stored in the node with IP: " << self.first.first << ", Port: " << self.first.second << endl;
+                }
+
+                return self;
+            }
+        }
+        else{
+            if((nodeId > id && nodeId > successor.second) || (nodeId < id && nodeId < successor.second)){
+                if(printRouting){
+                    cout << "Key is stored in the node with IP: " << successor.first.first << ", Port: " << successor.first.second << endl;
+                }
+
+                return successor;
+            }
+            else{
+                if(printRouting){
+                    cout << "Key is stored in the node with IP: " << self.first.first << ", Port: " << self.first.second << endl;
+                }
+
+                return self;
+            }
+        }
+    }
+
+    else{
+        //这里实现的是非线性查找。
+        pair < pair<string,int> , lli > node = closestPrecedingNode(nodeId);//这个node是前驱。
+
+
+        if(printRouting){
+            cout << "Routing into the node with id: " << node.second
+                 << ", IP: " << node.first.first << ", Port: " << node.first.second << endl;
+        }
+
+        if(node.second == id){
+            //key的前驱的id等于当前节点的id， 肯定key是存在于当前节点这里。
+            if(printRouting){
+                cout << "Key is stored in the node with IP: " << successor.first.first << ", Port: " << successor.first.second << endl;
+            }
+
+            return successor;
+        }
+        else{
+            if(!printRouting){
+                //这里不是routing模式。
+
+                /* connect to node which will now find the successor */
+                struct sockaddr_in serverToConnectTo;
+                socklen_t len = sizeof(serverToConnectTo);
+
+                string ip;
+                int port;
+
+                /* if this node couldn't find closest preciding node for given node id then now ask it's successor to do so */
+                if(node.second == -1){
+                    node = successor;
+                }
+
+                HelperFunctions help;
+
+                help.setServerDetails(serverToConnectTo,node.first.first,node.first.second);
+
+                /* set timer on this socket */
+                struct timeval timer;
+                help.setTimer(timer);
+
+                //bug！！！！
+                //这里不应该是监听后继的ip和port，而是要发送给后继需要寻找的key，然后后继回传key所在的node的id。
+                //！！！！！！！！！！！！！！！！！！！！！！！！！！！！
+                //------------------------------------------------------------
+                //这里其实没有bug，这里实现了递归查询，虽然我不知道接收到socket来信之后执行的代码片段，
+                //但是这里给当前节点所能找到的距离keyId最近的node进行了通信，让它递归查询keyId，并且回传key所在的node的IP,port,id信息。
+                int sockT = socket(AF_INET,SOCK_DGRAM,0);
+
+                setsockopt(sockT,SOL_SOCKET,SO_RCVTIMEO,(char*)&timer,sizeof(struct timeval));
+
+                if(sockT < 0){
+                    cout<<"socket cre error";
+                    perror("error");
+                    exit(-1);
+                }
+
+                /* send the node's id to the other node */
+                //这里把要查询的keyId递归地传给了当前节点所能找到的距离key最近的前驱node，to_string(nodeId)就是证据。
+                char nodeIdChar[40];
+                strcpy(nodeIdChar,to_string(nodeId).c_str());
+
+                // Package pkg;
+                // strcpy(pkg.keyId,to_string(nodeId).c_str());
+                // pkg.printRouting = printRouting;
+
+
+                //此处代码更改，传送的是一个pkg。
+                sendto(sockT, nodeIdChar, strlen(nodeIdChar), 0, (struct sockaddr*) &serverToConnectTo, len);
+
+                /* receive ip and port of node's successor as ip:port*/
+                // 这里收到的ip  ,port 其实就是已经经过递归，回传的精确的位置了。
+                char ipAndPort[40];
+                // Package recvPkg;
+
+                int l = recvfrom(sockT, ipAndPort, 1024, 0, (struct sockaddr *) &serverToConnectTo, &len);
+
+                // strcpy(ipAndPort,to_string(recvPkg.ipAndPortChar).c_str());
+                close(sockT);
+
+
+
+                //此时，l的信息是节点的后继的ip和port
+                if(l < 0){
+                    pair < pair<string,int> , lli > node;
+                    node.first.first = "";
+                    node.second = -1;
+                    node.first.second = -1;
+                    return node;
+                }
+
+                ipAndPort[l] = '\0';
+
+                /* set ip,port and hash for this node and return it */
+                string key = ipAndPort;
+                lli hash = help.getHash(ipAndPort);
+                pair<string,int> ipAndPortPair = help.getIpAndPort(key);
+                node.first.first = ipAndPortPair.first;
+                node.first.second = ipAndPortPair.second;
+                node.second = hash;
+                if(printRouting) cout << "Key is stored in the node with IP: " << node.first.first << ", Port: " << node.first.second << endl;
+
+                return node;
+            }
+
+            else{
+                //这里是routing模式。
+
+                /* connect to node which will now find the successor */
+                struct sockaddr_in serverToConnectTo;
+                socklen_t len = sizeof(serverToConnectTo);
+
+                string ip;
+                int port;
+
+                /* if this node couldn't find closest preciding node for given node id then now ask it's successor to do so */
+                if(node.second == -1){
+                    node = successor;
+                }
+
+                //这里配置了serverNode的信息。
+
+                serverNode.first.first = node.first.first;
+                serverNode.first.second = node.first.second;
+                serverNode.second = node.second;
+
+                HelperFunctions help;
+
+                //这里设置了递归的目标，这里的node不在是本节点了。是目标节点。
+                help.setServerDetails(serverToConnectTo,node.first.first,node.first.second);
+
+                /* set timer on this socket */
+                struct timeval timer;
+                help.setTimer(timer);
+
+                //bug！！！！
+                //这里不应该是监听后继的ip和port，而是要发送给后继需要寻找的key，然后后继回传key所在的node的id。
+                //！！！！！！！！！！！！！！！！！！！！！！！！！！！！
+                //------------------------------------------------------------
+                //这里其实没有bug，这里实现了递归查询，虽然我不知道接收到socket来信之后执行的代码片段，
+                //但是这里给当前节点所能找到的距离keyId最近的node进行了通信，让它递归查询keyId，并且回传key所在的node的IP,port,id信息。
+                int sockT = socket(AF_INET,SOCK_DGRAM,0);
+
+                setsockopt(sockT,SOL_SOCKET,SO_RCVTIMEO,(char*)&timer,sizeof(struct timeval));
+
+                if(sockT < 0){
+                    cout<<"socket cre error";
+                    perror("error");
+                    exit(-1);
+                }
+
+
+
+                /* send the node's id to the other node */
+                //这里把要查询的keyId递归地传给了当前节点所能找到的距离key最近的前驱node，to_string(nodeId)就是证据。
+                char nodeIdChar[40];
+                strcpy(nodeIdChar,to_string(nodeId).c_str());
+                int lenOfNodeId = strlen(nodeIdChar);
+                nodeIdChar[lenOfNodeId] = 'R';//R代表Routing.
+
+                // Package pkg;
+                // pkg.nodeIdChar = nodeIdChar;
+
+
+
+                sendto(sockT, nodeIdChar, strlen(nodeIdChar), 0, (struct sockaddr*) &serverToConnectTo, len);
+
+                /* receive ip and port of node's successor as ip:port*/
+                // 这里收到的ip  ,port 其实就是已经经过递归，回传的精确的位置了。
+                char ipAndPort[40];
+
+                int l = recvfrom(sockT, ipAndPort, 1024, 0, (struct sockaddr *) &serverToConnectTo, &len);
+
+                close(sockT);
+                //此时，l的信息是节点的后继的ip和port
+                if(l < 0){
+                    pair < pair<string,int> , lli > node;
+                    node.first.first = "";
+                    node.second = -1;
+                    node.first.second = -1;
+                    return node;
+                }
+
+                ipAndPort[l] = '\0';
+
+                /* set ip,port and hash for this node and return it */
+                string key = ipAndPort;
+                lli hash = help.getHash(ipAndPort);
+                pair<string,int> ipAndPortPair = help.getIpAndPort(key);
+                node.first.first = ipAndPortPair.first;
+                node.first.second = ipAndPortPair.second;
+                node.second = hash;
+                // if(printRouting) cout << "Key is stored in the node with IP: " << node.first.first << ", Port: " << node.first.second << endl;
+
+                return node;
+            }
+        }
+    }
 }
 
 pair< pair<string,int> , lli > NodeInformation::closestPrecedingNode(lli nodeId){

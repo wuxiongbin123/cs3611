@@ -31,6 +31,7 @@ class NodeInformation{
 		NodeInformation();
 
 		pair< pair<string,int> , lli > findSuccessor(lli nodeId, bool printRouting); //flag代表是否需要输出路由寻址过程.
+        pair< pair<string,int> , lli > findSuccessor_routing(lli nodeId, bool printRouting, pair< pair<string, int>, lli> &serverNodeId); //flag代表是否需要输出路由寻址过程.
 		pair< pair<string,int> , lli > closestPrecedingNode(lli nodeId);
 		void fixFingers();
 		void stabilize();

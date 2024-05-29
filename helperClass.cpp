@@ -10,7 +10,7 @@ vector<string> HelperFunctions::splitCommand(string command){
     int pos = 0;
     do{
         pos = command.find(' ');
-        string arg = command.substr(0,pos); 
+        string arg = command.substr(0,pos);
         arguments.push_back(arg);
         command = command.substr(pos+1);
     }while(pos != -1);
@@ -25,7 +25,7 @@ lli HelperFunctions::getHash(string key){
     int i;
     lli mod = pow(2,M);
 
-    
+
     /* convert string to an unsigned char array because SHA1 takes unsigned char array as parameter */
     unsigned char unsigned_key[key.length()+1];
     for(i=0;i<key.length();i++){
@@ -343,10 +343,36 @@ void HelperFunctions::sendSuccessor(NodeInformation nodeInfo,string nodeIdString
     lli nodeId = stoll(nodeIdString);
 
     socklen_t l = sizeof(client);
-    
+
     /* find successor of the joining node */
     pair< pair<string,int> , lli > succNode;
-    succNode = nodeInfo.findSuccessor(nodeId, printRouting);
+
+
+
+    //这里找到的是key的successor，而不是下一个server.
+
+    if(printRouting){
+        //设置下一级的id
+        pair<pair<string, int>, lli> serverNode;
+        succNode = nodeInfo.findSuccessor_routing(nodeId, printRouting, serverNode);
+        if(serverNode != -1){
+            //如果是-1，则说明没有去找server。
+            //接下来把serverNode的ip和port回传。
+            char serverIpAndPort[40];
+            string serverIp = serverNode.first.first;
+            string serverPort = to_string(serverNode.first.second);
+            strcpy(serverIpAndPort,combineIpAndPort(serverIp,serverPort).c_str());
+
+            //添加了一个S标记符用来区分这个是server的。
+            int len = strlen(serverIpAndPort);
+            serverIpAndPort[len] = 'S';
+
+            sendto(newSock, serverIpAndPort, strlen(serverIpAndPort), 0, (struct sockaddr*) &client, l);
+        }
+
+    }else{
+        succNode = nodeInfo.findSuccessor(nodeId, printRouting);
+    }
 
     /* get Ip and port of successor as ip:port in char array to send */
     char ipAndPort[40];
@@ -355,15 +381,19 @@ void HelperFunctions::sendSuccessor(NodeInformation nodeInfo,string nodeIdString
     strcpy(ipAndPort,combineIpAndPort(succIp,succPort).c_str());
 
     /* send ip and port info to the respective node */
+    //这里是发送范式，需要改动的地方只有ipAndPort和strlen(ipAndPort).
+    //client是上级，serverToConnectTo是下级。
     sendto(newSock, ipAndPort, strlen(ipAndPort), 0, (struct sockaddr*) &client, l);
-
+    //在dotask里面也要把接受到子代的routingPath返回给父亲。
+    char routingPath[40]
+    //这里将自己的前驱和后继返回给上一个routing它的节点。
 }
 
 /* send ip:port of predecessor of current node to contacting node */
 void HelperFunctions::sendPredecessor(NodeInformation nodeInfo,int newSock,struct sockaddr_in client){
-    
+
     pair< pair<string,int> , lli > predecessor = nodeInfo.getPredecessor();
-    
+
     string ip = predecessor.first.first;
     string port = to_string(predecessor.first.second);
 
@@ -371,7 +401,7 @@ void HelperFunctions::sendPredecessor(NodeInformation nodeInfo,int newSock,struc
 
     /* if predecessor is nil */
     if(ip == ""){
-        sendto(newSock, "", 0, 0, (struct sockaddr*) &client, l);       
+        sendto(newSock, "", 0, 0, (struct sockaddr*) &client, l);
     }
 
     else{
@@ -387,7 +417,7 @@ void HelperFunctions::sendPredecessor(NodeInformation nodeInfo,int newSock,struc
 
 /* get successor id of the node having ip address as ip and port num as port */
 lli HelperFunctions::getSuccessorId(string ip,int port){
-    
+
     struct sockaddr_in serverToConnectTo;
     socklen_t l = sizeof(serverToConnectTo);
 
@@ -499,7 +529,7 @@ pair< pair<string,int> , lli > HelperFunctions::getPredecessorNode(string ip,int
 
     ipAndPortChar[len] = '\0';
 
-    
+
 
     string ipAndPort = ipAndPortChar;
     lli hash;
@@ -534,7 +564,7 @@ vector< pair<string,int> > HelperFunctions::getSuccessorListFromNode(string ip,i
     /* set timer for socket */
     struct timeval timer;
     setTimer(timer);
-    
+
 
     int sock = socket(AF_INET,SOCK_DGRAM,0);
     if(sock < 0){
