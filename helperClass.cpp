@@ -338,39 +338,39 @@ void HelperFunctions::sendSuccessorId(NodeInformation nodeInfo,int newSock,struc
 }
 
 /* find successor of contacting node and send it's ip:port to it */
-void HelperFunctions::sendSuccessor(NodeInformation nodeInfo,string nodeIdString,int newSock,struct sockaddr_in client, bool printRouting){
+void HelperFunctions::sendSuccessor(NodeInformation nodeInfo,string nodeIdString,int newSock,struct sockaddr_in client, bool printRouting) {
     // cout << "sendSuccessor begins!" << endl;
     lli nodeId = stoll(nodeIdString);
 
     socklen_t l = sizeof(client);
 
     /* find successor of the joining node */
-    pair< pair<string,int> , lli > succNode;
+    pair <pair<string, int>, lli> succNode;
 
 
 
     //这里找到的是key的successor，而不是下一个server.
 
-    if(printRouting){
+    if (printRouting) {
         //设置下一级的id
-        pair<pair<string, int>, lli> serverNode;
+        pair <pair<string, int>, lli> serverNode;
         succNode = nodeInfo.findSuccessor_routing(nodeId, printRouting, serverNode);
-        if(serverNode != -1){
+        if (serverNode.second != -1) {
             //如果是-1，则说明没有去找server。
             //接下来把serverNode的ip和port回传。
             char serverIpAndPort[40];
             string serverIp = serverNode.first.first;
             string serverPort = to_string(serverNode.first.second);
-            strcpy(serverIpAndPort,combineIpAndPort(serverIp,serverPort).c_str());
+            strcpy(serverIpAndPort, combineIpAndPort(serverIp, serverPort).c_str());
 
             //添加了一个S标记符用来区分这个是server的。
             int len = strlen(serverIpAndPort);
             serverIpAndPort[len] = 'S';
 
-            sendto(newSock, serverIpAndPort, strlen(serverIpAndPort), 0, (struct sockaddr*) &client, l);
+            sendto(newSock, serverIpAndPort, strlen(serverIpAndPort), 0, (struct sockaddr *) &client, l);
         }
 
-    }else{
+    } else {
         succNode = nodeInfo.findSuccessor(nodeId, printRouting);
     }
 
@@ -378,15 +378,13 @@ void HelperFunctions::sendSuccessor(NodeInformation nodeInfo,string nodeIdString
     char ipAndPort[40];
     string succIp = succNode.first.first;
     string succPort = to_string(succNode.first.second);
-    strcpy(ipAndPort,combineIpAndPort(succIp,succPort).c_str());
+    strcpy(ipAndPort, combineIpAndPort(succIp, succPort).c_str());
 
     /* send ip and port info to the respective node */
     //这里是发送范式，需要改动的地方只有ipAndPort和strlen(ipAndPort).
     //client是上级，serverToConnectTo是下级。
-    sendto(newSock, ipAndPort, strlen(ipAndPort), 0, (struct sockaddr*) &client, l);
-    //在dotask里面也要把接受到子代的routingPath返回给父亲。
-    char routingPath[40]
-    //这里将自己的前驱和后继返回给上一个routing它的节点。
+    sendto(newSock, ipAndPort, strlen(ipAndPort), 0, (struct sockaddr *) &client, l);
+
 }
 
 /* send ip:port of predecessor of current node to contacting node */

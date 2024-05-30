@@ -299,7 +299,7 @@ void doTask(NodeInformation &nodeInfo,int newSock,struct sockaddr_in client,stri
             //此时收到的是server的ip，port
             //直接回传。
             socklen_t l = sizeof(client);
-            sendto(newSock, nodeIdString, strlen(nodeIdString), 0, (struct sockaddr*) &client, l);
+            sendto(newSock, nodeIdString.c_str(), strlen(nodeIdString.c_str()), 0, (struct sockaddr*) &client, l);
         }
 
         else
@@ -323,10 +323,7 @@ void listenTo(NodeInformation &nodeInfo){
 
         charNodeId[len] = '\0';
         string nodeIdString = charNodeId;//这玩意不是NodeId.
-        //如果听到了Server的信息就print出来。
-        if(nodeIdString.find("S") != -1){
-            cout << nodeIdString << endl;
-        }
+
 
         /* launch a thread that will perform diff tasks acc to received msg */
         //这里的sock就对应着本机的端口号，client作为一个数据体，储存着用户的ip和端口号，client有memeber, sin_port代表端口, sin_addr代表ip地址
