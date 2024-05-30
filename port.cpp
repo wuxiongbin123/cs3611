@@ -11,7 +11,7 @@ void SocketAndPort::specifyPortServer(){
     /* generating a port number between 1024 and 65535 */
     //这里就是初始化一个socket对应的port， 一个node唯一对应一个socket， 用ip：port唯一确定一个socket也是在唯一确定一个node。
     srand(time(0));
-    portNoServer = 1234;
+    portNoServer = rand() % 65536;
     if(portNoServer < 1024)
         portNoServer += 1024;
 
