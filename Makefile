@@ -6,7 +6,7 @@ do: main.o nodeInformation.o helperClass.o init.o port.o functions.o
 main.o: main.cpp
 		g++ -std=c++11 -c main.cpp
 		
-init.o: init.cpp
+init.o: init_for_main.cpp
 		g++ -std=c++11 -c init.cpp
 
 port.o: port.cpp

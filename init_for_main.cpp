@@ -1,6 +1,3 @@
-//
-// Created by Poker Joker on 2024/5/30.
-//
 #include <iostream>
 #include <vector>
 #include <cstdlib>
@@ -21,14 +18,11 @@ void initialize(){
 
     /* open a socket to listen to other nodes */
     nodeInfo.sp.specifyPortServer();
+    cout << "This is Main Node with Port 1234. " << endl;
 
-    cout<<"Now listening at port number "<<nodeInfo.sp.getPortNumber()<<endl;
+    thread first(create,ref(nodeInfo));
+    first.detach();
 
-    cout<<"Type help to know more\n";
-    string IpOfMain = "127.0.0.1";
-    string PortOfMain = "1234";
-
-    join(nodeInfo,IpOfMain, PortOfMain);
 
     string command;
 
